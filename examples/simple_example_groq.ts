@@ -7,7 +7,7 @@ async function formFillingSensible() {
     ...StagehandConfig,
     env: "BROWSERBASE",
     llmClient: new GroqClient({
-      modelName: "groq-llama3-70b-8192",
+      modelName: "groq-llama-3.3-70b-versatile",
       clientOptions: {
         apiKey: process.env.GROQ_API_KEY,
       },

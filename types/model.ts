@@ -35,6 +35,7 @@ export const AvailableModelSchema = z.enum([
   "groq-llama-3.2-90b-text-preview",
   "groq-llama3-groq-8b-8192-tool-use-preview",
   "groq-llama-3.1-8b-instant",
+  "groq-llama-3.3-70b-versatile",
 ]);
 
 export type AvailableModel = z.infer<typeof AvailableModelSchema>;

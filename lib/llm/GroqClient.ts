@@ -5,10 +5,10 @@ import { LogLine } from "../../types/log";
 import { AvailableModel } from "../../types/model";
 import { LLMCache } from "../cache/LLMCache";
 import {
-    ChatMessage,
-    CreateChatCompletionOptions,
-    LLMClient,
-    LLMResponse,
+  ChatMessage,
+  CreateChatCompletionOptions,
+  LLMClient,
+  LLMResponse,
 } from "./LLMClient";
 
 export class GroqClient extends LLMClient {

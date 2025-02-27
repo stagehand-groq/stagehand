@@ -43,6 +43,7 @@ const modelToProviderMap: { [key in AvailableModel]: ModelProvider } = {
   "groq-llama-3.2-90b-text-preview": "groq",
   "groq-llama3-groq-8b-8192-tool-use-preview": "groq",
   "groq-llama-3.1-8b-instant": "groq",
+  "groq-llama-3.3-70b-versatile": "groq",
 };
 
 export class LLMProvider {
