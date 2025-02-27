@@ -15,11 +15,31 @@ export const AvailableModelSchema = z.enum([
   "o3-mini",
   "cerebras-llama-3.3-70b",
   "cerebras-llama-3.1-8b",
+  "groq-llama3-groq-70b-8192-tool-use-preview",
+  "groq-gemma2-9b-it",
+  "groq-llama3-8b-8192",
+  "groq-llama-3.2-90b-vision-preview",
+  "groq-llama3-70b-8192",
+  "groq-llama-3.2-11b-vision-preview",
+  "groq-llama-3.2-11b-text-preview",
+  "groq-whisper-large-v3-turbo",
+  "groq-llava-v1.5-7b-4096-preview",
+  "groq-llama-3.1-70b-versatile",
+  "groq-llama-3.2-3b-preview",
+  "groq-whisper-large-v3",
+  "groq-llama-guard-3-8b",
+  "groq-mixtral-8x7b-32768",
+  "groq-gemma-7b-it",
+  "groq-distil-whisper-large-v3-en",
+  "groq-llama-3.2-1b-preview",
+  "groq-llama-3.2-90b-text-preview",
+  "groq-llama3-groq-8b-8192-tool-use-preview",
+  "groq-llama-3.1-8b-instant",
 ]);
 
 export type AvailableModel = z.infer<typeof AvailableModelSchema>;
 
-export type ModelProvider = "openai" | "anthropic" | "cerebras";
+export type ModelProvider = "openai" | "anthropic" | "cerebras" | "groq";
 
 export type ClientOptions = OpenAIClientOptions | AnthropicClientOptions;
 
