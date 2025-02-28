@@ -109,7 +109,7 @@ interface CreateChatCompletionOptions {
     retries?: number;
 }
 declare abstract class LLMClient {
-    type: "openai" | "anthropic" | "cerebras" | string;
+    type: "openai" | "anthropic" | "cerebras" | "groq" | string;
     modelName: AvailableModel;
     hasVision: boolean;
     clientOptions: ClientOptions;

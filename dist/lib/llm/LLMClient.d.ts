@@ -1,7 +1,7 @@
 import { ZodType } from "zod";
 import { LLMTool } from "../../types/llm";
-import { AvailableModel, ClientOptions } from "../../types/model";
 import { LogLine } from "../../types/log";
+import { AvailableModel, ClientOptions } from "../../types/model";
 export interface ChatMessage {
     role: "system" | "user" | "assistant";
     content: ChatMessageContent;
@@ -71,7 +71,7 @@ export interface CreateChatCompletionOptions {
     retries?: number;
 }
 export declare abstract class LLMClient {
-    type: "openai" | "anthropic" | "cerebras" | string;
+    type: "openai" | "anthropic" | "cerebras" | "groq" | string;
     modelName: AvailableModel;
     hasVision: boolean;
     clientOptions: ClientOptions;
