@@ -5286,10 +5286,271 @@ var CerebrasClient = class extends LLMClient {
   }
 };
 
-// lib/llm/OpenAIClient.ts
+// lib/llm/GroqClient.ts
 var import_openai2 = __toESM(require("openai"));
+var import_zod_to_json_schema4 = require("zod-to-json-schema");
+var GroqClient = class extends LLMClient {
+  constructor({
+    enableCaching = false,
+    cache,
+    modelName,
+    clientOptions,
+    userProvidedInstructions
+  }) {
+    super(modelName, userProvidedInstructions);
+    this.type = "groq";
+    this.hasVision = false;
+    this.client = new import_openai2.default(__spreadValues({
+      baseURL: "https://api.groq.com/openai/v1",
+      apiKey: (clientOptions == null ? void 0 : clientOptions.apiKey) || process.env.GROQ_API_KEY
+    }, clientOptions));
+    this.cache = cache;
+    this.enableCaching = enableCaching;
+    this.modelName = modelName;
+    this.clientOptions = clientOptions;
+  }
+  createChatCompletion(_0) {
+    return __async(this, arguments, function* ({
+      options,
+      retries,
+      logger
+    }) {
+      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
+      const optionsWithoutImage = __spreadValues({}, options);
+      delete optionsWithoutImage.image;
+      logger({
+        category: "groq",
+        message: "creating chat completion",
+        level: 1,
+        auxiliary: {
+          options: {
+            value: JSON.stringify(optionsWithoutImage),
+            type: "object"
+          }
+        }
+      });
+      const cacheOptions = {
+        model: this.modelName.split("groq-")[1],
+        messages: options.messages,
+        temperature: options.temperature,
+        response_model: options.response_model,
+        tools: options.tools,
+        retries
+      };
+      if (this.enableCaching) {
+        const cachedResponse = yield this.cache.get(
+          cacheOptions,
+          options.requestId
+        );
+        if (cachedResponse) {
+          logger({
+            category: "llm_cache",
+            message: "LLM cache hit - returning cached response",
+            level: 1,
+            auxiliary: {
+              cachedResponse: {
+                value: JSON.stringify(cachedResponse),
+                type: "object"
+              },
+              requestId: {
+                value: options.requestId,
+                type: "string"
+              },
+              cacheOptions: {
+                value: JSON.stringify(cacheOptions),
+                type: "object"
+              }
+            }
+          });
+          return cachedResponse;
+        }
+      }
+      const formattedMessages = options.messages.map((msg) => {
+        const baseMessage = {
+          content: typeof msg.content === "string" ? msg.content : Array.isArray(msg.content) && msg.content.length > 0 && "text" in msg.content[0] ? msg.content[0].text : ""
+        };
+        if (msg.role === "system") {
+          return __spreadProps(__spreadValues({}, baseMessage), { role: "system" });
+        } else if (msg.role === "assistant") {
+          return __spreadProps(__spreadValues({}, baseMessage), { role: "assistant" });
+        } else {
+          return __spreadProps(__spreadValues({}, baseMessage), { role: "user" });
+        }
+      });
+      let tools = (_a = options.tools) == null ? void 0 : _a.map((tool) => ({
+        type: "function",
+        function: {
+          name: tool.name,
+          description: tool.description,
+          parameters: {
+            type: "object",
+            properties: tool.parameters.properties,
+            required: tool.parameters.required
+          }
+        }
+      }));
+      if (options.response_model) {
+        const jsonSchema = (0, import_zod_to_json_schema4.zodToJsonSchema)(options.response_model.schema);
+        const schemaProperties = jsonSchema.properties || {};
+        const schemaRequired = jsonSchema.required || [];
+        const responseTool = {
+          type: "function",
+          function: {
+            name: "print_extracted_data",
+            description: "Prints the extracted data based on the provided schema.",
+            parameters: {
+              type: "object",
+              properties: schemaProperties,
+              required: schemaRequired
+            }
+          }
+        };
+        tools = tools ? [...tools, responseTool] : [responseTool];
+      }
+      try {
+        const apiResponse = yield this.client.chat.completions.create({
+          model: this.modelName.split("groq-")[1],
+          messages: [
+            ...formattedMessages,
+            // Add explicit instruction to return JSON if we have a response model
+            ...options.response_model ? [
+              {
+                role: "system",
+                content: `IMPORTANT: Your response must be valid JSON that matches this schema: ${JSON.stringify(options.response_model.schema)}`
+              }
+            ] : []
+          ],
+          temperature: options.temperature || 0.7,
+          max_tokens: options.maxTokens,
+          tools,
+          tool_choice: options.tool_choice || "auto"
+        });
+        const response = {
+          id: apiResponse.id,
+          object: "chat.completion",
+          created: Date.now(),
+          model: this.modelName.split("groq-")[1],
+          choices: [
+            {
+              index: 0,
+              message: {
+                role: "assistant",
+                content: ((_c = (_b = apiResponse.choices[0]) == null ? void 0 : _b.message) == null ? void 0 : _c.content) || null,
+                tool_calls: ((_e = (_d = apiResponse.choices[0]) == null ? void 0 : _d.message) == null ? void 0 : _e.tool_calls) || []
+              },
+              finish_reason: ((_f = apiResponse.choices[0]) == null ? void 0 : _f.finish_reason) || "stop"
+            }
+          ],
+          usage: {
+            prompt_tokens: ((_g = apiResponse.usage) == null ? void 0 : _g.prompt_tokens) || 0,
+            completion_tokens: ((_h = apiResponse.usage) == null ? void 0 : _h.completion_tokens) || 0,
+            total_tokens: ((_i = apiResponse.usage) == null ? void 0 : _i.total_tokens) || 0
+          }
+        };
+        logger({
+          category: "groq",
+          message: "response",
+          level: 1,
+          auxiliary: {
+            response: {
+              value: JSON.stringify(response),
+              type: "object"
+            },
+            requestId: {
+              value: options.requestId,
+              type: "string"
+            }
+          }
+        });
+        if (options.response_model) {
+          const toolCall = (_l = (_k = (_j = response.choices[0]) == null ? void 0 : _j.message) == null ? void 0 : _k.tool_calls) == null ? void 0 : _l[0];
+          if ((_m = toolCall == null ? void 0 : toolCall.function) == null ? void 0 : _m.arguments) {
+            try {
+              const result = JSON.parse(toolCall.function.arguments);
+              if (this.enableCaching) {
+                this.cache.set(cacheOptions, result, options.requestId);
+              }
+              return result;
+            } catch (e) {
+              logger({
+                category: "groq",
+                message: "failed to parse tool call arguments as JSON, retrying",
+                level: 1,
+                auxiliary: {
+                  error: {
+                    value: e.message,
+                    type: "string"
+                  }
+                }
+              });
+            }
+          }
+          const content = (_o = (_n = response.choices[0]) == null ? void 0 : _n.message) == null ? void 0 : _o.content;
+          if (content) {
+            try {
+              const jsonMatch = content.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                const result = JSON.parse(jsonMatch[0]);
+                if (this.enableCaching) {
+                  this.cache.set(cacheOptions, result, options.requestId);
+                }
+                return result;
+              }
+            } catch (e) {
+              logger({
+                category: "groq",
+                message: "failed to parse content as JSON",
+                level: 1,
+                auxiliary: {
+                  error: {
+                    value: e.message,
+                    type: "string"
+                  }
+                }
+              });
+            }
+          }
+          if (!retries || retries < 5) {
+            return this.createChatCompletion({
+              options,
+              logger,
+              retries: (retries != null ? retries : 0) + 1
+            });
+          }
+          throw new Error(
+            "Create Chat Completion Failed: Could not extract valid JSON from response"
+          );
+        }
+        if (this.enableCaching) {
+          this.cache.set(cacheOptions, response, options.requestId);
+        }
+        return response;
+      } catch (error) {
+        logger({
+          category: "groq",
+          message: "error creating chat completion",
+          level: 1,
+          auxiliary: {
+            error: {
+              value: error.message,
+              type: "string"
+            },
+            requestId: {
+              value: options.requestId,
+              type: "string"
+            }
+          }
+        });
+        throw error;
+      }
+    });
+  }
+};
+
+// lib/llm/OpenAIClient.ts
+var import_openai3 = __toESM(require("openai"));
 var import_zod3 = require("openai/helpers/zod");
-var import_zod_to_json_schema4 = __toESM(require("zod-to-json-schema"));
+var import_zod_to_json_schema5 = __toESM(require("zod-to-json-schema"));
 var OpenAIClient = class extends LLMClient {
   constructor({
     enableCaching = false,
@@ -5300,7 +5561,7 @@ var OpenAIClient = class extends LLMClient {
     super(modelName);
     this.type = "openai";
     this.clientOptions = clientOptions;
-    this.client = new import_openai2.default(clientOptions);
+    this.client = new import_openai3.default(clientOptions);
     this.cache = cache;
     this.enableCaching = enableCaching;
     this.modelName = modelName;
@@ -5450,7 +5711,7 @@ ${JSON.stringify(
         if (this.modelName.startsWith("o1") || this.modelName.startsWith("o3")) {
           try {
             const parsedSchema = JSON.stringify(
-              (0, import_zod_to_json_schema4.default)(options.response_model.schema)
+              (0, import_zod_to_json_schema5.default)(options.response_model.schema)
             );
             options.messages.push({
               role: "user",
@@ -5728,6 +5989,14 @@ var LLMProvider = class {
         });
       case "cerebras":
         return new CerebrasClient({
+          logger: this.logger,
+          enableCaching: this.enableCaching,
+          cache: this.cache,
+          modelName,
+          clientOptions
+        });
+      case "groq":
+        return new GroqClient({
           logger: this.logger,
           enableCaching: this.enableCaching,
           cache: this.cache,
