@@ -7,6 +7,7 @@ import {
 import { LLMCache } from "../cache/LLMCache";
 import { AnthropicClient } from "./AnthropicClient";
 import { CerebrasClient } from "./CerebrasClient";
+import { GroqClient } from "./GroqClient";
 import { LLMClient } from "./LLMClient";
 import { OpenAIClient } from "./OpenAIClient";
 
@@ -85,6 +86,14 @@ export class LLMProvider {
         });
       case "cerebras":
         return new CerebrasClient({
+          logger: this.logger,
+          enableCaching: this.enableCaching,
+          cache: this.cache,
+          modelName,
+          clientOptions,
+        });
+      case "groq":
+        return new GroqClient({
           logger: this.logger,
           enableCaching: this.enableCaching,
           cache: this.cache,
